@@ -20,14 +20,14 @@ end
 
 function write_mkd(field::String, status, file_name::String)
   open("$file_name.md", "a") do io
-    if occursin("Depends", field) 
-      println(io, "> $field: $status")
-    elseif occursin("Requires", field) 
+    if occursin("Depends", field) || occursin("Requires", field)
+      println(io, "> $field: $status\n")
+    #=elseif occursin("Requires", field) 
       println(io, "```
-              $field: $status
-```")
+$field: $status
+```")=#
     else
-      println(io, "  - $field: $status")
+      println(io, "$field\n- $status\n")
     end
   end
 end
@@ -44,7 +44,7 @@ function write_headers(data::String, file_name::String, pkg::String="", date::St
   open("$file_name.md", "a") do io
     println(io, "```$baro
 ```\n")
-    pg_divide = page_divide()
+    println(io, "---")
     date = getdate()
     println(io, "**Package**: $pkg  | $date\n")
   end
@@ -52,14 +52,14 @@ end
 
 function write_subheadings(data::String, file_name)
   open("$file_name.md", "a") do io
-    println(io, data, file_name)
+    println(io, data)
   end
 end
 
-function registry_helper(reg_lookup, status::String)
-  reg_item = something(reg_lookup, status)
-  #registry = println(reg_item)
-  return reg_item
+function registry_helper(registry_lookup, status::String)
+  registry_item = something(registry_lookup, status)
+#  registry_item ==  = println(reg_item)
+  return registry_item
 end
 
 function ownership_check(regst_info, file_name)
@@ -79,41 +79,46 @@ function authorship_check(regst_info, file_name)
   if author == "Not Found" || author_email == "Not Found"
     return @warn "Author Information not found" #Sutract from score by 2
   else
-    write_mkd("Author", author, file_name)
-    write_mkd("Author Email", author_email, file_name)
+    write_mkd("**Author**", author, file_name)
+    write_mkd("**Author Email**", author_email, file_name)
+    return @info "Author Information: $author\n$author_email"
   end
 end
 
 function yanked_check(regst_info, file_name)
   yanked = something(regst_info.yanked, "Not Found")
   yanked_reason = something(regst_info.yanked_reason, "False")
-  yanked_status = yanked ? write_mkd("Yanked Status", yanked_reason, "YES") : write_mkd("Yanked Status", yanked, file_name)
+  yanked_status = yanked ? write_mkd("**Yanked Status**", "$yanked_reason\n---", "YES") : write_mkd("**Yanked Status**", "$yanked \n\n---", file_name)
 end
 
 function license_check(regst_info, file_name)
   license = registry_helper(regst_info.license, "Not Found")
-  write_mkd("License", license, file_name)
+  write_mkd("**License**", license, file_name)
+  return @info "License Info: $license\n"
 end
 
 function version_check(regst_info, file_name)
   version = registry_helper(regst_info.version, "Not Provided")
-  write_mkd("Version", version, file_name)
-  return version
+  write_mkd("**Version**", version, file_name)
+  return @info "Version Info: $version\n"
 end
 
 function whl_file_check(file, file_name)
   whl_file = registry_helper(file, "Not Provided")
-  write_mkd("Release", whl_file, file_name)
+  write_mkd("**Release**", whl_file, file_name)
+  #=if whl_file == "Not Provided"
+    return @warn "Release Info: Not Provided"=#
+  whl_file == something && return @info "Release Info: $whl_file" || return @warn "Release Info: Not Provided"
 end
 
 function get_digests(file, file_name)
   sha256 = registry_helper(file.digests.sha256, "Not Provided")
-  write_mkd("SHA256", sha256, file_name)
+  write_mkd("**SHA256**", sha256, file_name)
 end
 
 function platform_check(regst_info, file_name)
   platform = registry_helper(regst_info.platform, "Not Provided")
-  write_mkd("Platform", platform, file_name)
+  write_mkd("**Platform**", "$platform \n", file_name)
 end
 
 function requires_py_check(regst_info, file_name)
@@ -142,9 +147,7 @@ function main()
 ██████╔╝██║  ██║██║  ██║╚██████╔╝
 ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ 
 ")
-
-  pg_divide = page_divide()
-
+  # Core Functionality
   for pkg in packages
     println("$baro",
             "## <=======CEAZ Build Integrity Triage=======>\n\n**Package:** $pkg  | $date" 
@@ -164,20 +167,15 @@ function main()
             authorship_check(regst_info, file_name),
             license_check(regst_info, file_name),
             version_check(regst_info, file_name),
+            yanked_check(regst_info, file_name),
+            pg_divide,
+            "## SHA Digests, Yanked Status, Package Types and Public Repository Info.\n\n", 
+            get_digests(file, file_name),
             whl_file_check(file.filename, file_name),
             platform_check(regst_info, file_name),
             requires_py_check(regst_info, file_name),
             depends_py_check(regst_info, file_name),
             "\n\n"
-           )
-
-    println(pg_divide)
-
-    println("## SHA Digests, Yanked Status, Package Types and Public Repository Info.\n\n", 
-            "  - Digests: ", file.digests.blake2b_256, "\n", file.digests.sha256, "\n", file.digests.md5, "\n",
-            yanked_check(regst_info, file_name),
-            get_digests(file, file_name),
-            "  - Project Urls: ", regst_info.project_url, "\n\n"
            )
     println(pg_divide)
   end
