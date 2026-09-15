@@ -90,12 +90,12 @@ end
 function ownership_check(regst_info, file_name) #;output = "$file_name" karg
   maintainer = something(regst_info.maintainer,"Not Found")
   maintainer_email = something(regst_info.maintainer_email, "Not Found")
-  if maintainer == "Not Found" || mainter_email "Not Found"
+  if !isnothing(maintainer) || !isnothing(maintainer_email)
     return @warn "Maintainer Info not found"
-  elseif maintainer
+  elseif !isnothing(maintainer)
     WRITE_MD && write_mkd("**Maintainer**", maintainer, file_name)
     return @info "Maintainer Information: $maintainer"
-  elseif maintainer_email
+  elseif !isnothing(maintainer_email)
     WRITE_MD && write_mkd("**Maintainer Email**", maintainer_email, file_name)
     return @info "Maintainer Info: $maintainer_email"
   end
