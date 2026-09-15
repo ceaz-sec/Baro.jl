@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-using JSON3, JSON, HTTP, Dates, Logging
+using JSON3, HTTP, Dates, Logging
 
 const WRITE_MD = "-md" in ARGS
 const WRITE_JSON = "-json" in ARGS
@@ -233,7 +233,7 @@ function main()
     # PyPI Registry Info
     content = JSON3.read(resp.body)
     file = content.urls[1]
-    whl_file = file.filename #Grabs Whl file for attestation
+    whl_file = file.filename # Grabs Whl file for attestation if present
     name = content.info.name
     regst_info = content.info
     version = content.info.version
@@ -241,7 +241,7 @@ function main()
     file_name = "$pkg-$(regst_info.version)"
 
     # Provenance Info
-    attestations = nothing
+    attestations = nothing # Initialize for Guards
     try
       response = request_prov_data(pkg, version, whl_file)
         if isnothing(response) == false
@@ -251,8 +251,6 @@ function main()
     catch err
       @warn "No Provenance file to inspect $err"
       return nothing
-      #@info "Provenance Check complete for $pkg $version"
-      #continue
     end
 
     # Write Header File Data
