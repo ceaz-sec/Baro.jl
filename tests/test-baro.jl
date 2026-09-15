@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-using JSON3, JSON, HTTP, Dates, Logging
+using JSON3, HTTP, Dates, Logging
 
 const WRITE_MD = "-md" in ARGS
 const WRITE_JSON = "-json" in ARGS
@@ -31,8 +31,16 @@ end
 
 function request_prov_data(pkg, version, whl_file)
   provenance_url = "https://pypi.org/integrity/$pkg/$version/$whl_file/provenance"
-  response = HTTP.get(provenance_url)
-  return response
+  try
+    response = HTTP.get(provenance_url)
+    return response
+  catch err
+    WRITE_MD && write_mkd("**Provenance**", "Not Found in Registry", whl_file)
+    @warn "Provenance Not Found: $err"
+    return nothing
+  finally
+    @info "Provenance check complete for $pkg $version"
+  end
 end
 
 function getdate()
@@ -84,9 +92,12 @@ function ownership_check(regst_info, file_name) #;output = "$file_name" karg
   maintainer_email = something(regst_info.maintainer_email, "Not Found")
   if maintainer == "Not Found" || mainter_email "Not Found"
     return @warn "Maintainer Info not found"
-  elseif maintainer || maintainer_email
+  elseif maintainer
     WRITE_MD && write_mkd("**Maintainer**", maintainer, file_name)
+    return @info "Maintainer Information: $maintainer"
+  elseif maintainer_email
     WRITE_MD && write_mkd("**Maintainer Email**", maintainer_email, file_name)
+    return @info "Maintainer Info: $maintainer_email"
   end
 end
 
@@ -107,8 +118,10 @@ function yanked_check(regst_info, file_name)
   yanked_reason = something(regst_info.yanked_reason, "False"); yanked_status = yanked 
   if yanked && WRITE_MD
     write_mkd("**Yanked Status**", "$yanked_reason\n---", "YES")
+    return @warn "Yanked Status: $yanked, Reason: yanked_reason"
   elseif WRITE_MD
     write_mkd("**Yanked Status**", "$yanked \n\n---", file_name)
+    return @info "Yanked Status: $yanked\n"
   end
 end
 
@@ -144,36 +157,55 @@ end
 function get_digests(file, file_name)
   sha256 = registry_helper(file.digests.sha256, "Not Provided")
   WRITE_MD && write_mkd("**SHA256**", sha256, file_name)
+  return @info "SHA256: $sha256"
 end
 
 function platform_check(regst_info, file_name)
   platform = registry_helper(regst_info.platform, "Not Provided")
   WRITE_MD && write_mkd("**Platform**", "$platform \n", file_name)
+  return @info "Platform Info: $platform"
 end
 
 function requires_py_check(regst_info, file_name)
   requires_py = registry_helper(regst_info.requires_python, "Nothing Found")
   WRITE_MD && write_mkd("Requires Python", requires_py, file_name)
+  return @info "Required Python: $requires_py"
 end
 
 function depends_py_check(regst_info, file_name)
   depends_py = registry_helper(regst_info.requires_dist, "No Dependencies Found")
   WRITE_MD && write_mkd("Depends on Python", depends_py, file_name)
+  return @info "Dependencies: $depends_py"
 end
 
 function pub_attest_check(attestations, file_name)
-  publisher = registry_helper(attestations.publisher.kind, "No Publisher Found")
-  WRITE_MD && write_mkd("**Publisher**", publisher, file_name)
+  if !isnothing(attestations)
+    publisher = registry_helper(attestations.publisher.kind, "No Publisher Found")
+    WRITE_MD && write_mkd("**Publisher**", publisher, file_name)
+    return @info "Publisher: $publisher"
+  else
+    return @warn "Publisher Attestation: Not Found"
+  end
 end
 
 function intg_attest_check(attestations, file_name)
-  integrated_time = registry_helper(attestations.attestations[1].verification_material.transparency_entries[1].integratedTime, "Nothing Found")
-  WRITE_MD && write_mkd("**Integrated Time**", integrated_time, file_name)
+  if !isnothing(attestations)
+    integrated_time = registry_helper(attestations.attestations[1].verification_material.transparency_entries[1].integratedTime, "Nothing Found")
+    WRITE_MD && write_mkd("**Integrated Time**", integrated_time, file_name)
+    return @info "Integrated Time: $integrated_time"
+  else
+    return @warn "Attestation Integrated Time Not Found"
+  end
 end
 
 function repo_attest_check(attestations, file_name)
-  repo = registry_helper(attestations.publisher.repository, "No Repository Info Found")
-  WRITE_MD && write_mkd("**Repository**", repo, file_name)
+  if !isnothing(attestations)
+    repo = registry_helper(attestations.publisher.repository, "No Repository Info Found")
+    WRITE_MD && write_mkd("**Repository**", repo, file_name)
+    return @info "Repository: $repo"
+  else
+    @warn "Attestation Repostitory Not Found"
+  end
 end
 
 function main()
@@ -209,34 +241,40 @@ function main()
     file_name = "$pkg-$(regst_info.version)"
 
     # Provenance Info
-    response = request_prov_data(pkg, version, whl_file)
-    prov = JSON3.read(response.body)
-    attestations = prov.attestation_bundles[1]
+    attestations = nothing
+    try
+      response = request_prov_data(pkg, version, whl_file)
+        if isnothing(response) == false
+          prov = JSON3.read(response.body)
+          attestations = prov.attestation_bundles[1]
+        end
+    catch err
+      @warn "No Provenance file to inspect $err"
+      return nothing
+      #@info "Provenance Check complete for $pkg $version"
+      #continue
+    end
 
     # Write Header File Data
     WRITE_MD && write_headers(baro, file_name, "$pkg", "$date")
-
-
-    # Extract Triage Data
     WRITE_MD && write_subheadings("## Ownship Contact, License, Version and Dependencies.\n", file_name)
-    println("## Ownship Contact, License, Version and Dependencies.\n\n",
-            ownership_check(regst_info, file_name),
-            authorship_check(regst_info, file_name),
-            license_check(regst_info, file_name),
-            version_check(regst_info, file_name),
-            yanked_check(regst_info, file_name),
-            "---",
-            "## SHA Digests, Yanked Status, Package Types and Public Repository Info.\n\n", 
-            get_digests(file, file_name),
-            whl_file_check(file.filename, file_name),
-            platform_check(regst_info, file_name),
-            requires_py_check(regst_info, file_name),
-            depends_py_check(regst_info, file_name),
-            pub_attest_check(attestations, file_name),
-            repo_attest_check(attestations, file_name),
-            intg_attest_check(attestations, file_name),
-            "\n\n"
-           )
+    
+    # Extract Triage Metadata
+    ownership_check(regst_info, file_name)
+    authorship_check(regst_info, file_name)
+    license_check(regst_info, file_name)
+    version_check(regst_info, file_name)
+    yanked_check(regst_info, file_name)
+    println("--------------------------------------")
+    get_digests(file, file_name)
+    whl_file_check(file.filename, file_name)
+    platform_check(regst_info, file_name)
+    requires_py_check(regst_info, file_name)
+    depends_py_check(regst_info, file_name)
+    println("--------------------------------------")
+    pub_attest_check(attestations, file_name)
+    repo_attest_check(attestations, file_name)
+    intg_attest_check(attestations, file_name)
   end
 end
 
