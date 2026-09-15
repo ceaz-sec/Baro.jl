@@ -24,9 +24,15 @@ Examples:
 
 function requestdata(pkg)
   # Request Data from the Package Registry
+  # version = nothing
   resp = HTTP.get("https://pypi.org/pypi/$pkg/json")
-  typeof(pkg)
   return resp
+end
+
+function request_prov_data(pkg, version, whl_file)
+  provenance_url = "https://pypi.org/integrity/$pkg/$version/$whl_file/provenance"
+  response = HTTP.get(provenance_url)
+  return response
 end
 
 function getdate()
@@ -108,8 +114,15 @@ end
 
 function license_check(regst_info, file_name)
   license = registry_helper(regst_info.license, "Not Found")
-  WRITE_MD && write_mkd("**License**", license, file_name)
-  return @info "License Info: $license\n"
+  license_expression = registry_helper(regst_info.license_expression, "Not Found")
+  if license == "Not Found"
+    WRITE_MD && write_mkd("**License**", license, file_name)
+  elseif license_expression == "Not Found"
+    WRITE_MD && write_mkd("**License Expression**", license_expression, file_name)
+  else
+    return @info "License Info: $license\n"
+    return @info "License Expression: $license_expression\n"
+  end
 end
 
 function version_check(regst_info, file_name)
@@ -148,6 +161,21 @@ function depends_py_check(regst_info, file_name)
   WRITE_MD && write_mkd("Depends on Python", depends_py, file_name)
 end
 
+function pub_attest_check(attestations, file_name)
+  publisher = registry_helper(attestations.publisher.kind, "No Publisher Found")
+  WRITE_MD && write_mkd("**Publisher**", publisher, file_name)
+end
+
+function intg_attest_check(attestations, file_name)
+  integrated_time = registry_helper(attestations.attestations[1].verification_material.transparency_entries[1].integratedTime, "Nothing Found")
+  WRITE_MD && write_mkd("**Integrated Time**", integrated_time, file_name)
+end
+
+function repo_attest_check(attestations, file_name)
+  repo = registry_helper(attestations.publisher.repository, "No Repository Info Found")
+  WRITE_MD && write_mkd("**Repository**", repo, file_name)
+end
+
 function main()
   date = getdate()
   # Need to add If else here based off of selection
@@ -170,11 +198,22 @@ function main()
             "## <=======CEAZ Build Integrity Triage=======>\n\n**Package:** $pkg  | $date" 
             )
     resp = requestdata(pkg)
-    # Load Response into JSON
+    # PyPI Registry Info
     content = JSON3.read(resp.body)
     file = content.urls[1]
+    whl_file = file.filename #Grabs Whl file for attestation
+    name = content.info.name
     regst_info = content.info
+    version = content.info.version
+    println(version)
     file_name = "$pkg-$(regst_info.version)"
+
+    # Provenance Info
+    response = request_prov_data(pkg, version, whl_file)
+    prov = JSON3.read(response.body)
+    attestations = prov.attestation_bundles[1]
+
+    # Write Header File Data
     WRITE_MD && write_headers(baro, file_name, "$pkg", "$date")
 
 
@@ -193,6 +232,9 @@ function main()
             platform_check(regst_info, file_name),
             requires_py_check(regst_info, file_name),
             depends_py_check(regst_info, file_name),
+            pub_attest_check(attestations, file_name),
+            repo_attest_check(attestations, file_name),
+            intg_attest_check(attestations, file_name),
             "\n\n"
            )
   end
