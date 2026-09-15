@@ -104,7 +104,7 @@ end
 function authorship_check(regst_info, file_name)
   author = something(regst_info.author, "Not Found")
   author_email = something(regst_info.author, "Not Found")
-  if author == "Not Found" || author_email == "Not Found"
+  if !isnothing(author) || !isnothing(author_email)
     return @warn "Author Information not found" #Sutract from score by 2
   else
     WRITE_MD && write_mkd("**Author**", author, file_name)
@@ -128,9 +128,9 @@ end
 function license_check(regst_info, file_name)
   license = registry_helper(regst_info.license, "Not Found")
   license_expression = registry_helper(regst_info.license_expression, "Not Found")
-  if license == "Not Found"
+  if !isnothing(license)
     WRITE_MD && write_mkd("**License**", license, file_name)
-  elseif license_expression == "Not Found"
+  elseif !isnothing(license_expression)
     WRITE_MD && write_mkd("**License Expression**", license_expression, file_name)
   else
     return @info "License Info: $license\n"
@@ -147,7 +147,7 @@ end
 function whl_file_check(file, file_name)
   whl_file = registry_helper(file, "Not Provided")
   WRITE_MD && write_mkd("**Release**", whl_file, file_name)
-  if whl_file == "Not Provided"
+  if isnothing(whl_file)
     return @warn "Release Info: Not Provided"
   else
     return @info "Release Info: $whl_file" 
