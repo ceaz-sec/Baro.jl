@@ -208,6 +208,19 @@ function repo_attest_check(attestations, file_name)
   end
 end
 
+function cert_attest_check(attestations, file_name)
+  if !isnothing(attestations) #Double Negitve check
+    cert = registry_helper(attestations.attestations[1].verification_material.certificate, "No Certification Found")
+    if !isnothing(cert)
+      cert_shortened = first(cert, 64) * "..."
+      WRITE_MD && write_mkd("**Certification**", cert_shortened, file_name)
+      return @info "Attestation Cerification: $cert_shortened"
+    end
+  else
+    @warn "Attestation Certification Not Found"
+  end
+end
+
 function main()
   date = getdate()
   # Need to add If else here based off of selection
@@ -273,6 +286,7 @@ function main()
     pub_attest_check(attestations, file_name)
     repo_attest_check(attestations, file_name)
     intg_attest_check(attestations, file_name)
+    cert_attest_check(attestations, file_name)
   end
 end
 
