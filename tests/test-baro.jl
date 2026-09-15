@@ -195,7 +195,6 @@ function main()
             depends_py_check(regst_info, file_name),
             "\n\n"
            )
-    println("---")
   end
 end
 
