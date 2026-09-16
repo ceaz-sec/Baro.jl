@@ -88,23 +88,27 @@ function registry_helper(registry_lookup, status::String)
 end
 
 function ownership_check(regst_info, file_name) #;output = "$file_name" karg
-  maintainer = something(regst_info.maintainer,"Not Found")
-  maintainer_email = something(regst_info.maintainer_email, "Not Found")
-  if maintainer == "Not Found" || mainter_email "Not Found"
-    return @warn "Maintainer Info not found"
-  elseif maintainer
+  #maintainer = something(regst_info.maintainer,"Not Found")
+  #maintainer_email = something(regst_info.maintainer_email, "Not Found")
+  if !isnothing(regst_info.maintainer)
+    maintainer = something(regst_info.maintainer,"Not Found")
     WRITE_MD && write_mkd("**Maintainer**", maintainer, file_name)
     return @info "Maintainer Information: $maintainer"
-  elseif maintainer_email
+  elseif !isnothing(regst_info.maintainer_email)
+    maintainer_email = something(regst_info.maintainer_email, "Not Found")
     WRITE_MD && write_mkd("**Maintainer Email**", maintainer_email, file_name)
     return @info "Maintainer Info: $maintainer_email"
+  elseif isnothing(regst_info.maintainer)
+    return @warn "Maintainer Info Not Found"
+  elseif isnothing(regst_info.maintainer_email)
+    return @warn "Maintainer Email Not Found"
   end
 end
 
 function authorship_check(regst_info, file_name)
   author = something(regst_info.author, "Not Found")
   author_email = something(regst_info.author, "Not Found")
-  if author == "Not Found" || author_email == "Not Found"
+  if isnothing(author) || isnothing(author_email)
     return @warn "Author Information not found" #Sutract from score by 2
   else
     WRITE_MD && write_mkd("**Author**", author, file_name)
@@ -128,13 +132,14 @@ end
 function license_check(regst_info, file_name)
   license = registry_helper(regst_info.license, "Not Found")
   license_expression = registry_helper(regst_info.license_expression, "Not Found")
-  if license == "Not Found"
+  if !isnothing(license)
     WRITE_MD && write_mkd("**License**", license, file_name)
-  elseif license_expression == "Not Found"
-    WRITE_MD && write_mkd("**License Expression**", license_expression, file_name)
+  elseif !isnothing(license_expression)
+    license_exp = first(license_expression, 16) * "..."
+    WRITE_MD && write_mkd("**License Expression**", license_exp, file_name)
   else
     return @info "License Info: $license\n"
-    return @info "License Expression: $license_expression\n"
+    return @info "License Expression: $license_exp\n"
   end
 end
 
@@ -144,12 +149,12 @@ function version_check(regst_info, file_name)
   return @info "Version Info: $version\n"
 end
 
-function whl_file_check(file, file_name)
-  whl_file = registry_helper(file, "Not Provided")
-  WRITE_MD && write_mkd("**Release**", whl_file, file_name)
-  if whl_file == "Not Provided"
+function whl_file_check(whl_file, file_name)
+  if isnothing(whl_file)
     return @warn "Release Info: Not Provided"
   else
+    whl_file = registry_helper(whl_file, "Not Provided")
+    WRITE_MD && write_mkd("**Release**", whl_file, file_name)
     return @info "Release Info: $whl_file" 
   end
 end
@@ -208,6 +213,19 @@ function repo_attest_check(attestations, file_name)
   end
 end
 
+function cert_attest_check(attestations, file_name)
+  if !isnothing(attestations) #Double Negitve check
+    cert = registry_helper(attestations.attestations[1].verification_material.certificate, "No Certification Found")
+    if !isnothing(cert)
+      cert_shortened = first(cert, 64) * "..."
+      WRITE_MD && write_mkd("**Certification**", cert_shortened, file_name)
+      return @info "Attestation Cerification: $cert_shortened"
+    end
+  else
+    @warn "Attestation Certification Not Found"
+  end
+end
+
 function main()
   date = getdate()
   # Need to add If else here based off of selection
@@ -233,7 +251,7 @@ function main()
     # PyPI Registry Info
     content = JSON3.read(resp.body)
     file = content.urls[1]
-    whl_file = file.filename #Grabs Whl file for attestation
+    whl_file = file.filename # Grabs Whl file for attestation if present
     name = content.info.name
     regst_info = content.info
     version = content.info.version
@@ -241,7 +259,7 @@ function main()
     file_name = "$pkg-$(regst_info.version)"
 
     # Provenance Info
-    attestations = nothing
+    attestations = nothing # Initialize for Guards
     try
       response = request_prov_data(pkg, version, whl_file)
         if isnothing(response) == false
@@ -251,8 +269,6 @@ function main()
     catch err
       @warn "No Provenance file to inspect $err"
       return nothing
-      #@info "Provenance Check complete for $pkg $version"
-      #continue
     end
 
     # Write Header File Data
@@ -275,6 +291,7 @@ function main()
     pub_attest_check(attestations, file_name)
     repo_attest_check(attestations, file_name)
     intg_attest_check(attestations, file_name)
+    cert_attest_check(attestations, file_name)
   end
 end
 

@@ -88,23 +88,27 @@ function registry_helper(registry_lookup, status::String)
 end
 
 function ownership_check(regst_info, file_name) #;output = "$file_name" karg
-  maintainer = something(regst_info.maintainer,"Not Found")
-  maintainer_email = something(regst_info.maintainer_email, "Not Found")
-  if !isnothing(maintainer) || !isnothing(maintainer_email)
-    return @warn "Maintainer Info not found"
-  elseif !isnothing(maintainer)
+  #maintainer = something(regst_info.maintainer,"Not Found")
+  #maintainer_email = something(regst_info.maintainer_email, "Not Found")
+  if !isnothing(regst_info.maintainer)
+    maintainer = something(regst_info.maintainer,"Not Found")
     WRITE_MD && write_mkd("**Maintainer**", maintainer, file_name)
     return @info "Maintainer Information: $maintainer"
-  elseif !isnothing(maintainer_email)
+  elseif !isnothing(regst_info.maintainer_email)
+    maintainer_email = something(regst_info.maintainer_email, "Not Found")
     WRITE_MD && write_mkd("**Maintainer Email**", maintainer_email, file_name)
     return @info "Maintainer Info: $maintainer_email"
+  elseif isnothing(regst_info.maintainer)
+    return @warn "Maintainer Info Not Found"
+  elseif isnothing(regst_info.maintainer_email)
+    return @warn "Maintainer Email Not Found"
   end
 end
 
 function authorship_check(regst_info, file_name)
   author = something(regst_info.author, "Not Found")
   author_email = something(regst_info.author, "Not Found")
-  if !isnothing(author) || !isnothing(author_email)
+  if isnothing(author) || isnothing(author_email)
     return @warn "Author Information not found" #Sutract from score by 2
   else
     WRITE_MD && write_mkd("**Author**", author, file_name)
@@ -131,10 +135,11 @@ function license_check(regst_info, file_name)
   if !isnothing(license)
     WRITE_MD && write_mkd("**License**", license, file_name)
   elseif !isnothing(license_expression)
-    WRITE_MD && write_mkd("**License Expression**", license_expression, file_name)
+    license_exp = first(license_expression, 16) * "..."
+    WRITE_MD && write_mkd("**License Expression**", license_exp, file_name)
   else
     return @info "License Info: $license\n"
-    return @info "License Expression: $license_expression\n"
+    return @info "License Expression: $license_exp\n"
   end
 end
 
@@ -144,12 +149,12 @@ function version_check(regst_info, file_name)
   return @info "Version Info: $version\n"
 end
 
-function whl_file_check(file, file_name)
-  whl_file = registry_helper(file, "Not Provided")
-  WRITE_MD && write_mkd("**Release**", whl_file, file_name)
+function whl_file_check(whl_file, file_name)
   if isnothing(whl_file)
     return @warn "Release Info: Not Provided"
   else
+    whl_file = registry_helper(whl_file, "Not Provided")
+    WRITE_MD && write_mkd("**Release**", whl_file, file_name)
     return @info "Release Info: $whl_file" 
   end
 end
