@@ -88,8 +88,6 @@ function registry_helper(registry_lookup, status::String)
 end
 
 function ownership_check(regst_info, file_name) #;output = "$file_name" karg
-  #maintainer = something(regst_info.maintainer,"Not Found")
-  #maintainer_email = something(regst_info.maintainer_email, "Not Found")
   if !isnothing(regst_info.maintainer)
     maintainer = something(regst_info.maintainer,"Not Found")
     WRITE_MD && write_mkd("**Maintainer**", maintainer, file_name)
@@ -106,14 +104,14 @@ function ownership_check(regst_info, file_name) #;output = "$file_name" karg
 end
 
 function authorship_check(regst_info, file_name)
-  author = something(regst_info.author, "Not Found")
-  author_email = something(regst_info.author, "Not Found")
-  if isnothing(author) || isnothing(author_email)
-    return @warn "Author Information not found" #Sutract from score by 2
-  else
+  if !isnothing(regst_info.author)
+    author = something(regst_info.author, "Not Found")
     WRITE_MD && write_mkd("**Author**", author, file_name)
+    return @warn "Author Information not found" #Sutract from score by 2
+  elseif !isnothing(regst_info.author_email)
+    author_email = something(regst_info.author_email, "Not Found")
     WRITE_MD && write_mkd("**Author Email**", author_email, file_name)
-    return @info "Author Information: $author\n$author_email"
+    return @info "Author Information: $author_email"
   end
 end
 
@@ -245,7 +243,7 @@ function main()
   
   for pkg in packages
     println("$baro",
-            "## <=======CEAZ Build Integrity Triage=======>\n\n**Package:** $pkg  | $date" 
+            "## <=======BARO PRE-INGESTION TRIAGE=======>\n\n**Package:** $pkg  | $date" 
             )
     resp = requestdata(pkg)
     # PyPI Registry Info

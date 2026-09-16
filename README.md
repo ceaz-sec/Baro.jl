@@ -15,7 +15,7 @@ Baro checks the Barometer of package registries. It isa PyPi package security tr
 ---
 
 ## Dependencies
- - Julia 1.9
+ - Julia 1.12
  - pkg add HTTP JSON3 DATES
 
 ## Usage
