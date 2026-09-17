@@ -11,9 +11,6 @@ Flags:
   -json     write ndjson report
   -h        show help info
 
-Input:
-  packages.txt  one package per line
-
 Examples:
   julia tool.jl requests click -md
   julia baro.jl packages.txt -json
