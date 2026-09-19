@@ -1,12 +1,13 @@
-#!/usr/bin/env julia
+module Baro
+
 using JSON3, HTTP, Dates, Logging
 
+include("arg_helper.jl")
 include("data_requests.jl")
 include("output_data.jl")
 include("ownership.jl")
 include("metadata.jl")
 include("provenance.jl")
-include("arg_helper.jl")
 
 function getdate()
   date = Dates.now()
@@ -20,8 +21,6 @@ end
 
 function main()
   date = getdate()
-  # Need to add If else here based off of selection
-  # Perhaps an outfile from write_mkd only if selected
 
   # Core ARG Functionality
   packages = setdiff(ARGS, ["-md", "-json"])
@@ -82,4 +81,6 @@ function main()
   end
 end
 
-main()
+export main
+
+end

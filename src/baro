@@ -1,0 +1,7 @@
+#!/usr/bin/env julia
+include("arg_helper.jl")
+include("Baro.jl")
+
+using .Baro
+
+main()
