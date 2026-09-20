@@ -39,9 +39,6 @@ baro.jl -h # Will display help
 
 ## RoadMap
 **Adding Support For More Registries**:
- - Go
- - Crates
- - NuGet
  - Npm
  - HuggingFace
 
