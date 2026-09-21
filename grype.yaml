@@ -1,0 +1,8 @@
+fail-on-severity: critical
+
+ignore:
+  - vulnerability: CVE-2026-31789
+    reason: "32-bit systems only, Baro runs on 64-bit, not in scope."
+  - vulnerability: CVE-2026-34182
+    reson: "CMS AuthEnvelopedData path not used with Baro tool."
+
