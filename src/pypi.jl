@@ -86,6 +86,19 @@ function version_check(regst_info, file_name)
   end
 end
 
+function classifiers_check(regst_info, file_name)
+  development_status = registry_helper(regst_info.classifiers[1], "Not Found")
+  if occursin("Production", development_status) && !isnothing(development_status)
+    WRITE_MD && write_mkd("**Development Status**", development_status, file_name)
+    return @info "$development_status"
+  elseif occursin("Dev", development_status) && !isnothing(development_status)
+    WRITE_MD && write_mkd("**Development Status**", development_status, file_name)
+    return @warn "$development_status - This is for development currently"
+  else
+    return @warn "Development Status: Not Found"
+  end
+end
+
 function whl_file_check(whl_file, file_name)
   if !isnothing(whl_file)
     whl_file = registry_helper(whl_file, "Not Provided")
