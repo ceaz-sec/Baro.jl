@@ -1,6 +1,6 @@
 ---
 
-name: Baro Release v0.2.0
+name: Baro Release
 on:
   push:
     tags:
