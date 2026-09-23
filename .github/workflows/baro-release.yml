@@ -5,6 +5,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch: true
 
 jobs:
   release:
@@ -18,14 +19,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate Baro SBOM
+      - name: Install Trivy
         run: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | \
-        sh -s -- -b /usr/local/bin
-        trivy fs . --format cyclonedx -o baro-sbom.cdx.json
+        curl -sfL \
+        https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+         | sh -s -- -b /usr/local/bin
+
+      - name: Install Grype
+        run: |
+          curl -sfL \
+          https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+          | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM
+        run: |
+          trivy fs . \
+          --format cyclonedx \
+          -o baro-sbom.cdx.json
 
       - name: Scan Baro SBOM
-        run: grype sbom:baro-sbom.cdx.json --fail-on critical
+        run: grype sbom:baro-sbom.cdx.json \
+        --fail-on critical
 
       - name: Build artifact
         run: |
