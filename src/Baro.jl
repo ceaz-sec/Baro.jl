@@ -3,11 +3,8 @@ module Baro
 using JSON3, HTTP, Dates, Logging
 
 include("arg_helper.jl")
-include("data_requests.jl")
 include("output_data.jl")
-include("ownership.jl")
-include("metadata.jl")
-include("provenance.jl")
+include("pypi.jl")
 
 function getdate()
   date = Dates.now()
@@ -66,6 +63,7 @@ function main()
     authorship_check(regst_info, file_name)
     license_check(regst_info, file_name)
     version_check(regst_info, file_name)
+    classifiers_check(regst_info, file_name)
     yanked_check(regst_info, file_name)
     println("--------------------------------------")
     get_digests(file, file_name)
