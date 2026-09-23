@@ -20,7 +20,7 @@ function main()
   date = getdate()
 
   # Core ARG Functionality
-  packages = setdiff(ARGS, ["-md", "-json"])
+  packages = setdiff(ARGS, ["-md"])
   "-h" in ARGS || length(ARGS) <= 0 && (println(HELP); exit(0))
 
   # Baro Banner
