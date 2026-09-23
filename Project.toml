@@ -1,6 +1,6 @@
 name = "Baro"
 uuid = "4ed54edd-8850-469d-9c34-ebee2ecf5715"
-version = "0.1.0"
+version = "0.3.4"
 authors = ["Marcus Morris <ceaz1025@zohomail.com>"]
 license = "Appache-2.0"
 

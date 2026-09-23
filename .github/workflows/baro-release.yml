@@ -15,22 +15,43 @@ jobs:
       attestations: write
       contents: read
 
-      steps:
-        - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-        - name: Generate Baro SBOM
-          run: trivy fs . --format cyclonedx -o baro-sbom.cdx.json
+      - name: Install Trivy
+        run: |
+          curl -sfL \
+          https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b /usr/local/bin
 
-        - name: Scan Baro SBOM
-          run: grype sbom:baro-sbom.cdx.json --fail-on critical
+      - name: Install Grype
+        run: |
+          curl -sfL \
+          https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+          | sh -s -- -b /usr/local/bin
 
-        - name: Build artifact
-          run: |
-            tar -czf Baro.jl-${{ github.ref_name }}.tar.gz \
-              --exclude='.git' \
-              --exclude='.github' \
-              .
-        - name: Attest Build Provenance - Baro
-          uses: actions/attest@v4
-          with:
-            subject-path: 'Baro.jl-${{github.ref_name }}.tar.gz'
+      - name: Generate SBOM
+        run: |
+          trivy fs . \
+          --format cyclonedx \
+          -o baro-sbom.cdx.json
+
+      - name: Scan Baro SBOM
+        run: |
+          grype sbom:baro-sbom.cdx.json \
+          --fail-on critical
+
+      - name: Build artifact
+        run: |
+          artifact="Baro.jl-${{ github.ref_name }}.tar.gz"
+          tar -czf "/tmp/$artifact" \
+          --exclude='*.git' \
+          --exclude='*.github' \
+          .
+
+          mv "/tmp/$artifact" "$artifact"
+
+      - name: Attest Build Provenance - Baro
+        uses: actions/attest@v4
+        with:
+          subject-path: 'Baro.jl-${{github.ref_name }}.tar.gz'

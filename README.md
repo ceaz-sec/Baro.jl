@@ -26,7 +26,6 @@ baro.jl [packages] [flags]
 | Flag | Description |
 |------|-------------|
 | `-md` | write a markdown report |
-| `-json` | write a ndjson report |
 | `-h` | help |
 
 ## Examples
@@ -41,5 +40,6 @@ baro.jl -h # Will display help
 **Adding Support For More Registries**:
  - Npm
  - HuggingFace
+ - NDJSON output
 
 ---
