@@ -21,9 +21,9 @@ jobs:
 
       - name: Install Trivy
         run: |
-        curl -sfL \
-        https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-         | sh -s -- -b /usr/local/bin
+          curl -sfL \
+          https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b /usr/local/bin
 
       - name: Install Grype
         run: |
@@ -38,8 +38,9 @@ jobs:
           -o baro-sbom.cdx.json
 
       - name: Scan Baro SBOM
-        run: grype sbom:baro-sbom.cdx.json \
-        --fail-on critical
+        run: |
+          grype sbom:baro-sbom.cdx.json \
+          --fail-on critical
 
       - name: Build artifact
         run: |
