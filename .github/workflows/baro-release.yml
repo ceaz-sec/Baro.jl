@@ -44,8 +44,8 @@ jobs:
       - name: Build artifact
         run: |
           tar -czf Baro.jl-${{ github.ref_name }}.tar.gz \
-          --exclude='.git' \
-          --exclude='.github' \
+          --exclude='*.git' \
+          --exclude='*.github' \
           .
       - name: Attest Build Provenance - Baro
         uses: actions/attest@v4
