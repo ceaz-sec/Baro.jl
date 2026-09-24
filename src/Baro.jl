@@ -11,22 +11,41 @@ function getdate()
   return date
 end
 
+function registry_helper1(registry_lookup, status::String)
+  try
+    isnothing(registry_item) 
+    registry_item = something(registry_lookup, status)
+    return registry_item
+  catch e
+    return "Registry item: $registry_item not found - $e"
+  end
+end
+
 function registry_helper(registry_lookup, status::String)
-  registry_item = something(registry_lookup, status)
-  return registry_item
+  try registry_item = something(registry_lookup, status) catch; nothing end
+end
+
+function input_file(package_file::String)
+  open("$package_file", "r") do f
+    readlines(f)
+  end
 end
 
 function main()
   date = getdate()
 
-  # Core ARG Functionality
-  packages = setdiff(ARGS, ["-md"])
-  "-h" in ARGS || length(ARGS) <= 0 && (println(HELP); exit(0))
+  #= Core ARG Functionality
+  packages = setdiff(ARGS, ["package.txt", "-md"])
+  "-h" in ARGS || length(ARGS) <= 0 && (println(HELP); exit(0))=#
 
   # Baro Banner
   baro = baro_banner()
-  
-  for pkg in packages
+
+  # Core ARG Functionality 
+  registry_packages = INPUT_FILE ? input_file(PKG_FILE) : setdiff(ARGS, ["package.txt", "-md", "-f", PKG_FILE])
+  "-h" in ARGS || length(ARGS) <= 0 && (println(HELP); exit(0))
+
+  for pkg in registry_packages
     println("$baro",
             "## <=======BARO PRE-INGESTION TRIAGE=======>\n\n**Package:** $pkg  | $date" 
             )
@@ -38,29 +57,17 @@ function main()
     name = content.info.name
     regst_info = content.info
     version = content.info.version
-    println(version)
     file_name = "$pkg-$(regst_info.version)"
-
-    # Provenance Info
-    attestations = nothing # Initialize for Guards
-    try
-      response = request_prov_data(pkg, version, whl_file)
-        if isnothing(response) == false
-          prov = JSON3.read(response.body)
-          attestations = prov.attestation_bundles[1]
-        end
-    catch err
-      @warn "No Provenance file to inspect $err"
-      return nothing
-    end
 
     # Write Header File Data
     WRITE_MD && write_headers(baro, file_name, "$pkg", "$date")
     WRITE_MD && write_subheadings("## Ownship Contact, License, Version and Dependencies.\n", file_name)
     
     # Extract Triage Metadata
-    ownership_check(regst_info, file_name)
-    authorship_check(regst_info, file_name)
+    ownership_check1(regst_info, file_name)
+    ownership_check2(regst_info, file_name)
+    authorship_check1(regst_info, file_name)
+    authorship_check2(regst_info, file_name)
     license_check(regst_info, file_name)
     version_check(regst_info, file_name)
     classifiers_check(regst_info, file_name)
@@ -72,6 +79,8 @@ function main()
     requires_py_check(regst_info, file_name)
     depends_py_check(regst_info, file_name)
     println("--------------------------------------")
+    # Provenance Data
+    attestations = request_prov_data(pkg, version, whl_file)
     pub_attest_check(attestations, file_name)
     repo_attest_check(attestations, file_name)
     intg_attest_check(attestations, file_name)

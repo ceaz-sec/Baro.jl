@@ -3,50 +3,64 @@ using HTTP, JSON3, Dates
 # Request PyPi Data
 function requestdata(pkg)
   # Request Data from the Package Registry
-  resp = HTTP.get("https://pypi.org/pypi/$pkg/json")
-  return resp
+  try
+    resp = HTTP.get("https://pypi.org/pypi/$pkg/json")
+    return resp
+  catch err
+    @error "Could not reach the PyPI registry $err"
+  end
 end
 
-function request_prov_data(pkg, version, whl_file)
+function request_prov_data(pkg, version, whl_file, file_name::String="")
   provenance_url = "https://pypi.org/integrity/$pkg/$version/$whl_file/provenance"
   try
     response = HTTP.get(provenance_url)
-    return response
+    prov = JSON3.read(response.body)
+    return prov.attestation_bundles[1]
   catch err
-    WRITE_MD && write_mkd("**Provenance**", "Not Found in Registry", whl_file)
-    @warn "Provenance Not Found: $err"
-    return nothing
-  finally
-    @info "Provenance check complete for $pkg $version"
+    WRITE_MD && write_mkd("**Provenance**", "Not Found in Registry", file_name)
+    @warn "Provenance Not Found for Specified Package including - Publisher,Certification & Repository origin."
   end
 end
 
 # Check for Signs of Ownership
-function ownership_check(regst_info, file_name) #;output = "$file_name" karg
+function ownership_check1(regst_info, file_name) #;output = "$file_name" karg
   if !isnothing(regst_info.maintainer)
     maintainer = something(regst_info.maintainer,"Not Found")
     WRITE_MD && write_mkd("**Maintainer**", maintainer, file_name)
-    return @info "Maintainer Information: $maintainer"
-  elseif !isnothing(regst_info.maintainer_email)
-    maintainer_email = something(regst_info.maintainer_email, "Not Found")
-    WRITE_MD && write_mkd("**Maintainer Email**", maintainer_email, file_name)
-    return @info "Maintainer Info: $maintainer_email"
-  elseif isnothing(regst_info.maintainer)
-    return @warn "Maintainer Info Not Found"
-  elseif isnothing(regst_info.maintainer_email)
-    return @warn "Maintainer Email Not Found"
+    @info "Maintainer Information: $maintainer"
+  else
+    @warn "Maintainer Info Not Found"
   end
 end
 
-function authorship_check(regst_info, file_name)
+function ownership_check2(regst_info, file_name)
+  if !isnothing(regst_info.maintainer_email)
+    maintainer_email = something(regst_info.maintainer_email, "Not Found")
+    WRITE_MD && write_mkd("**Maintainer Email**", maintainer_email, file_name)
+    @info "Maintainer Email: $maintainer_email"
+  else
+    @warn "Maintainer Email Not Found"
+  end
+end
+
+function authorship_check1(regst_info, file_name)
   if !isnothing(regst_info.author)
     author = something(regst_info.author, "Not Found")
     WRITE_MD && write_mkd("**Author**", author, file_name)
-    return @warn "Author Information not found" #Sutract from score by 2
-  elseif !isnothing(regst_info.author_email)
+    @info "Author Information: $author"
+  else
+    @warn "Author Information not found" #Sutract from score by 2
+  end
+end
+
+function authorship_check2(regst_info, file_name)
+  if !isnothing(regst_info.author_email)
     author_email = something(regst_info.author_email, "Not Found")
     WRITE_MD && write_mkd("**Author Email**", author_email, file_name)
-    return @info "Author Information: $author_email"
+    @info "Author Email Information: $author_email"
+  else
+    @warn "Author Email Information not found"
   end
 end
 
@@ -64,38 +78,48 @@ function yanked_check(regst_info, file_name)
 end
 
 function license_check(regst_info, file_name)
-  license = registry_helper(regst_info.license, "Not Found")
-  license_expression = registry_helper(regst_info.license_expression, "Not Found")
-  if !isnothing(regst_info.license)
-    WRITE_MD && write_mkd("**License**", license, file_name)
-  elseif !isnothing(regst_info.license_expression)
-    #license_expression = registry_helper(regst_info.license_expression, "Not Found")
-    license_exp = first(license_expression, 16) * "..."
-    WRITE_MD && write_mkd("**License Expression**", license_exp, file_name)
-  else
-    return @info "License Info: $license\n"
-    return @info "License Expression: $license_exp\n"
+  try
+    license = registry_helper(regst_info.license, "Not Found")
+    license_expression = registry_helper(regst_info.license_expression, "Not Found")
+    if !isnothing(regst_info.license)
+      WRITE_MD && write_mkd("**License**", license, file_name)
+      @info "License Info: $license\n"
+    elseif !isnothing(regst_info.license_expression)
+      license_exp = first(license_expression, 16) * "..."
+      WRITE_MD && write_mkd("**License Expression**", license_exp, file_name)
+      @info "License Expression: $license_exp\n"
+    end
+  catch err
+    @warn "No License Information Found"
   end
 end
 
 function version_check(regst_info, file_name)
-  if !isnothing(regst_info.version)
-    version = registry_helper(regst_info.version, "Not Provided")
-    WRITE_MD && write_mkd("**Version**", version, file_name)
-    return @info "Version Info: $version\n"
+  try
+    if !isnothing(regst_info.version)
+      version = registry_helper(regst_info.version, "Not Provided")
+      WRITE_MD && write_mkd("**Version**", version, file_name)
+      @info "Version Info: $version\n"
+    end
+  catch err
+    @warn "Package Version Check Failed"
   end
 end
 
 function classifiers_check(regst_info, file_name)
-  development_status = registry_helper(regst_info.classifiers[1], "Not Found")
-  if occursin("Production", development_status) && !isnothing(development_status)
-    WRITE_MD && write_mkd("**Development Status**", development_status, file_name)
-    return @info "$development_status"
-  elseif occursin("Dev", development_status) && !isnothing(development_status)
-    WRITE_MD && write_mkd("**Development Status**", development_status, file_name)
-    return @warn "$development_status - This is for development currently"
-  else
-    return @warn "Development Status: Not Found"
+  if !isnothing(regst_info.classifiers)
+    try
+      if occursin("Production", regst_info.classifiers[1])
+        development_status = registry_helper(regst_info.classifiers[1], "Not Found")
+        WRITE_MD && write_mkd("**Classifiers of Development Status**", development_status, file_name)
+        @info "$development_status"
+      elseif occursin("Dev", development_status) && !isnothing(development_status)
+        WRITE_MD && write_mkd("**Classifiers of Development Status**", development_status, file_name)
+        @warn "$development_status"
+      end
+    catch err
+        @warn "Classifiers of Development Status: Not Found"
+    end
   end
 end
 
@@ -103,9 +127,9 @@ function whl_file_check(whl_file, file_name)
   if !isnothing(whl_file)
     whl_file = registry_helper(whl_file, "Not Provided")
     WRITE_MD && write_mkd("**Release**", whl_file, file_name)
-    return @info "Release Info: $whl_file"
+    @info "Release Info: $whl_file"
   else
-    return @warn "Release Info: Not Provided"
+    @warn "Release Info: Not Provided"
   end
 end
 
@@ -113,71 +137,92 @@ function get_digests(file, file_name)
   if !isnothing(file.digests.sha256)
     sha256 = registry_helper(file.digests.sha256, "Not Provided")
     WRITE_MD && write_mkd("**SHA256**", sha256, file_name)
-    return @info "SHA256: $sha256"
+    @info "SHA256: $sha256"
   else
-    return @warn "SHA256 Not Found"
+    @warn "SHA256 Not Found"
   end
 end
 
 function platform_check(regst_info, file_name)
-  platform = registry_helper(regst_info.platform, "Not Provided")
-  WRITE_MD && write_mkd("**Platform**", "$platform \n", file_name)
-  return @info "Platform Info: $platform"
+  if !isnothing(regst_info.platform)
+    platform = registry_helper(regst_info.platform, "Not Provided")
+    WRITE_MD && write_mkd("**Platform**", "$platform \n", file_name)
+    @info "Platform Info: $platform"
+  else
+    @warn "Platform Information Not Found"
+  end
 end
 
 function requires_py_check(regst_info, file_name)
   requires_py = registry_helper(regst_info.requires_python, "Nothing Found")
-  WRITE_MD && write_mkd("Requires Python", requires_py, file_name)
-  return @info "Required Python: $requires_py"
+  if !isnothing(requires_py)
+    WRITE_MD && write_mkd("Requires Python Version", requires_py, file_name)
+    @info "Required Python: $requires_py"
+  else
+    @warn "Required Python Version Not Found"
+  end
 end
 
 function depends_py_check(regst_info, file_name)
-  depends_py = registry_helper(regst_info.requires_dist, "No Dependencies Found")
-  WRITE_MD && write_mkd("Depends on Python", depends_py, file_name)
-  return @info "Dependencies: $depends_py"
+  try
+    depends_py = registry_helper(regst_info.requires_dist, "No Dependencies Found")
+    if !isnothing(depends_py)
+      no_of_deps = length(regst_info.requires_dist[1:end])
+      WRITE_MD && write_mkd("Dependencies ($no_of_deps)", depends_py, file_name)
+      @info "Dependencies ($no_of_deps): $depends_py"
+    else
+    end
+  catch err
+      @warn "No Dependencies Found"
+  end
 end
 
 # Search for Provenance Evidence
 function intg_attest_check(attestations, file_name)
   if !isnothing(attestations)
-    integrated_time = registry_helper(attestations.attestations[1].verification_material.transparency_entries[1].integratedTime, "Nothing Found")
-    WRITE_MD && write_mkd("**Integrated Time**", integrated_time, file_name)
-    return @info "Integrated Time: $integrated_time"
-  else
-    return @warn "Attestation Integrated Time Not Found"
+    try
+      integrated_time = registry_helper(attestations.attestations[1].verification_material.transparency_entries[1].integratedTime, "Nothing Found")
+      WRITE_MD && write_mkd("**Integrated Time**", integrated_time, file_name)
+      @info "Integrated Time: $integrated_time"
+    catch e
+      @warn "Attestation Integrated Time Not Found"
+    end
   end
 end
 
 function repo_attest_check(attestations, file_name)
   if !isnothing(attestations)
-    repo = registry_helper(attestations.publisher.repository, "No Repository Info Found")
-    WRITE_MD && write_mkd("**Repository**", repo, file_name)
-    return @info "Repository: $repo"
-  else
-    @warn "Attestation Repostitory Not Found"
+    try 
+      repo = registry_helper(attestations.publisher.repository, "No Repository Info Found")
+      WRITE_MD && write_mkd("**Repository**", repo, file_name)
+      @info "Repository: $repo"
+    catch e
+      @warn "Attestation Repo Not Found"
+    end
   end
 end
 
 function cert_attest_check(attestations, file_name)
   if !isnothing(attestations) #Double Negitve check
-    cert = registry_helper(attestations.attestations[1].verification_material.certificate, "No Certification Found")
-    if !isnothing(cert)
+    try
+      cert = registry_helper(attestations.attestations[1].verification_material.certificate, "No Certification Found")
       cert_shortened = first(cert, 64) * "..."
       WRITE_MD && write_mkd("**Certification**", cert_shortened, file_name)
-      return @info "Attestation Cerification: $cert_shortened"
+      @info "Attestation Cerification: $cert_shortened"
+    catch e
+      @warn "Attestation Certification Not Found"
     end
-  else
-    @warn "Attestation Certification Not Found"
   end
 end
 
 function pub_attest_check(attestations, file_name)
   if !isnothing(attestations)
-    publisher = registry_helper(attestations.publisher.kind, "No Publisher Found")
-    WRITE_MD && write_mkd("**Publisher**", publisher, file_name)
-    return @info "Publisher: $publisher"
-  else
-    return @warn "Publisher Attestation: Not Found"
+    try
+      publisher = registry_helper(attestations.publisher.kind, "No Publisher Found")
+      WRITE_MD && write_mkd("**Publisher**", publisher, file_name)
+      @info "Publisher: $publisher"
+    catch e
+      @warn "Publisher Attestation: Not Found"
+    end
   end
 end
-
