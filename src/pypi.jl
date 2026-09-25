@@ -23,6 +23,18 @@ function request_prov_data(pkg, version, whl_file, file_name::String="")
   end
 end
 
+function package_summary(regst_info, file_name)
+  try
+    if !isnothing(regst_info.summary)
+      package_summary = registry_helper(regst_info.summary, "Not Found")
+      WRITE_MD && write_mkd("**Package Summary**", package_summary, file_name)
+      @info "Package Summary: $package_summary"
+    end
+  catch err
+    @warn "Package Summary Info Not Found"
+  end
+end  
+
 # Check for Signs of Ownership
 function ownership_check1(regst_info, file_name) #;output = "$file_name" karg
   if !isnothing(regst_info.maintainer)
@@ -103,6 +115,18 @@ function version_check(regst_info, file_name)
     end
   catch err
     @warn "Package Version Check Failed"
+  end
+end
+
+function public_repo_check(regst_info, file_name)
+  try
+    if !isnothing(regst_info.project_urls["Homepage"])# || !isnothing(regst_info.project_urls["Source"])
+      public_repo = registry_helper(regst_info.project_urls["Homepage"], "Not Provided")
+      WRITE_MD && write_mkd("**Public Repository**", public_repo, file_name)
+      @info "Public Repo: $public_repo\n"
+    end
+  catch err
+    @warn "Public Repository Not Listed"
   end
 end
 

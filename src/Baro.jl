@@ -47,7 +47,9 @@ function main()
 
   for pkg in registry_packages
     println("$baro",
-            "## <=======BARO PRE-INGESTION TRIAGE=======>\n\n**Package:** $pkg  | $date" 
+            "<=======================>
+BARO PRE-INGESTION TRIAGE
+<=======================>\n\nPackage: $pkg  | Triage Time: $date" 
             )
     resp = requestdata(pkg)
     # PyPI Registry Info
@@ -64,6 +66,7 @@ function main()
     WRITE_MD && write_subheadings("## Ownship Contact, License, Version and Dependencies.\n", file_name)
     
     # Extract Triage Metadata
+    package_summary(regst_info, file_name)
     ownership_check1(regst_info, file_name)
     ownership_check2(regst_info, file_name)
     authorship_check1(regst_info, file_name)
@@ -71,6 +74,7 @@ function main()
     license_check(regst_info, file_name)
     version_check(regst_info, file_name)
     classifiers_check(regst_info, file_name)
+    public_repo_check(regst_info, file_name)
     yanked_check(regst_info, file_name)
     println("--------------------------------------")
     get_digests(file, file_name)
