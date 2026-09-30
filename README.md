@@ -11,14 +11,14 @@
 
 ## BARO OSS Triage
 
-> Baro checks the Barometer of package registries. It isa PyPi package security triaging tool. It finds license, author, release, version, dependencies and evidence of provenance. Supply Chain Security starts at the registry, therefore this tool helps address the key fields and requirements cybersecurity professionals need to know to make informed decisions before ingesting software.
+> Baro checks the Barometer of package registries. It is a PyPi package security triaging tool. It finds license, author, release, version, dependencies and evidence of provenance. Supply Chain Security starts at the registry, therefore this tool helps address the key fields and requirements cybersecurity professionals need to know to make informed decisions before ingesting software.
 ---
 
 ![Baro CLI Output](docs/cli-examples/baro-pypi-requests.png)
 
 ## Dependencies
  - Julia 1.12
- - pkg add HTTP JSON3 DATES
+ - pkg add HTTP JSON3 Dates StyledStrings
 
 ## Usage
 baro.jl [packages] [flags]
@@ -28,12 +28,13 @@ baro.jl [packages] [flags]
 | Flag | Description |
 |------|-------------|
 | `-md` | write a markdown report |
+| `-json` | write ndjson for records and duckdb ingestion |
 | `-h` | help |
 
 ## Examples
 ```
 baro.jl requests click flask -md
-baro.jl requests -md -json
+baro.jl requests cifi -md -json
 baro.jl botocore idna selenium # prints terminal output only
 baro.jl -h # Will display help
 ```
@@ -42,6 +43,10 @@ baro.jl -h # Will display help
 **Adding Support For More Registries**:
  - Npm
  - HuggingFace
- - NDJSON output
+ - Julia
+
+ **Adding Features**:
+ - OPA/Rego json rules for assessment
+ - DuckDB documentation instuction for use with ndjson
 
 ---
