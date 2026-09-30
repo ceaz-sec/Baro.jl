@@ -1,17 +1,19 @@
 name = "Baro"
 uuid = "4ed54edd-8850-469d-9c34-ebee2ecf5715"
-version = "0.3.4"
-authors = ["Marcus Morris <ceaz1025@zohomail.com>"]
 license = "Appache-2.0"
+version = "0.4.0"
+authors = ["Marcus Morris <ceaz1025@zohomail.com>"]
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 
 [compat]
 Dates = "1.11.0"
 HTTP = "2.6.7"
 JSON3 = "1.14.3"
 Logging = "1.11.0"
+StyledStrings = "1.11.0"

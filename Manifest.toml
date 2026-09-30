@@ -2,17 +2,17 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "71db037dda3dc34bb17e34b0aa73f8e4325f0b73"
+project_hash = "b96b213090b15d8e1b68a370d9e441e6bb96a607"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
 
 [[deps.Baro]]
-deps = ["Dates", "HTTP", "JSON3"]
+deps = ["Dates", "HTTP", "JSON3", "Logging"]
 path = "."
 uuid = "4ed54edd-8850-469d-9c34-ebee2ecf5715"
-version = "0.1.0"
+version = "0.4.0"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -115,6 +115,10 @@ version = "0.7.0"
 deps = ["Dates", "UUIDs"]
 git-tree-sha1 = "159331b30e94d7b11379037feeb9b690950cace8"
 uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+version = "1.11.0"
+
+[[deps.StyledStrings]]
+uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 version = "1.11.0"
 
 [[deps.TOML]]
