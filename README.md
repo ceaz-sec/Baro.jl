@@ -14,7 +14,7 @@
 > Baro checks the Barometer of package registries. It isa PyPi package security triaging tool. It finds license, author, release, version, dependencies and evidence of provenance. Supply Chain Security starts at the registry, therefore this tool helps address the key fields and requirements cybersecurity professionals need to know to make informed decisions before ingesting software.
 ---
 
-![Application Screenshot](examples/baro-requests.png)
+![Baro CLI Output](examples/baro-pypi-requests.png)
 
 ## Dependencies
  - Julia 1.12
